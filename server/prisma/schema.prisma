@@ -1,0 +1,136 @@
+// Tables are created by migrations/001_init.sql (the source of truth).
+// This file only maps them for the Prisma client. Do NOT run `prisma migrate`.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName        String      @map("full_name") @db.VarChar(120)
+  email           String      @db.VarChar(255)
+  passwordHash    String      @map("password_hash")
+  targetRole      String?     @map("target_role") @db.VarChar(150)
+  experienceLevel String?     @map("experience_level") @db.VarChar(20)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  resumes         Resume[]
+  interviews      Interview[]
+
+  @@map("users")
+}
+
+model Resume {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String      @map("user_id") @db.Uuid
+  fileName      String?     @map("file_name") @db.VarChar(255)
+  fileUrl       String?     @map("file_url")
+  extractedText String      @map("extracted_text")
+  skills        String[]    @default([])
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interviews    Interview[]
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model Interview {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  resumeId        String?           @map("resume_id") @db.Uuid
+  jobRole         String            @map("job_role") @db.VarChar(150)
+  companyName     String?           @map("company_name") @db.VarChar(150)
+  jobDescription  String?           @map("job_description")
+  interviewType   String            @map("interview_type") @db.VarChar(20)
+  difficultyLevel String            @default("medium") @map("difficulty_level") @db.VarChar(10)
+  status          String            @default("in_progress") @db.VarChar(20)
+  startedAt       DateTime          @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime?         @map("completed_at") @db.Timestamptz(6)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume          Resume?           @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  questions       Question[]
+  summary         InterviewSummary?
+
+  @@index([userId, startedAt(sort: Desc)])
+  @@index([resumeId])
+  @@map("interviews")
+}
+
+model Question {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId      String    @map("interview_id") @db.Uuid
+  questionOrder    Int       @map("question_order")
+  questionText     String    @map("question_text")
+  questionType     String    @map("question_type") @db.VarChar(20)
+  expectedKeywords String[]  @default([]) @map("expected_keywords")
+  modelName        String?   @map("model_name") @db.VarChar(60)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  interview        Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  answers          Answer[]
+
+  @@unique([interviewId, questionOrder])
+  @@map("questions")
+}
+
+model Answer {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId      String          @map("question_id") @db.Uuid
+  attemptNumber   Int             @default(1) @map("attempt_number")
+  answerText      String          @map("answer_text")
+  audioUrl        String?         @map("audio_url")
+  transcriptText  String?         @map("transcript_text")
+  durationSeconds Int?            @map("duration_seconds")
+  wordCount       Int             @default(0) @map("word_count")
+  submittedAt     DateTime        @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  feedback        AnswerFeedback?
+
+  @@unique([questionId, attemptNumber])
+  @@map("answers")
+}
+
+model AnswerFeedback {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  answerId               String   @unique @map("answer_id") @db.Uuid
+  overallScore           Decimal  @map("overall_score") @db.Decimal(3, 1)
+  relevanceScore         Decimal  @map("relevance_score") @db.Decimal(3, 1)
+  clarityScore           Decimal  @map("clarity_score") @db.Decimal(3, 1)
+  structureScore         Decimal  @map("structure_score") @db.Decimal(3, 1)
+  specificityScore       Decimal  @map("specificity_score") @db.Decimal(3, 1)
+  confidenceScore        Decimal  @map("confidence_score") @db.Decimal(3, 1)
+  strengths              Json     @default("[]")
+  weaknesses             Json     @default("[]")
+  improvementSuggestions Json     @default("[]") @map("improvement_suggestions")
+  improvedAnswer         String?  @map("improved_answer")
+  starAnalysis           Json?    @map("star_analysis")
+  modelName              String?  @map("model_name") @db.VarChar(60)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  answer                 Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@map("answer_feedback")
+}
+
+model InterviewSummary {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  interviewId        String    @unique @map("interview_id") @db.Uuid
+  overallScore       Decimal   @map("overall_score") @db.Decimal(3, 1)
+  contentScore       Decimal?  @map("content_score") @db.Decimal(3, 1)
+  structureScore     Decimal?  @map("structure_score") @db.Decimal(3, 1)
+  communicationScore Decimal?  @map("communication_score") @db.Decimal(3, 1)
+  technicalScore     Decimal?  @map("technical_score") @db.Decimal(3, 1)
+  totalQuestions     Int       @map("total_questions")
+  answeredQuestions  Int       @map("answered_questions")
+  strengths          Json      @default("[]")
+  weaknesses         Json      @default("[]")
+  recommendedActions Json      @default("[]") @map("recommended_actions")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  interview          Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@map("interview_summary")
+}

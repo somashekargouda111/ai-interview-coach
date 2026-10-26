@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/* Scorecard palette: grey desk, white sheet, ink text, pine for actions, marker yellow for the question. */
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --color-desk: #e9edf1;
+  --color-sheet: #fbfcfd;
+  --color-ink: #18202e;
+  --color-muted: #5b6678;
+  --color-line: #cfd6df;
+  --color-pine: #0f5f52;
+  --color-pine-dark: #0a463d;
+  --color-marker: #fde68a;
+  --color-pass: #1f7a4d;
+  --color-warn: #a16207;
+  --color-flag: #b4283f;
+}
+
+body {
+  background: var(--color-desk);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-pine);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
